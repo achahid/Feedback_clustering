@@ -73,6 +73,49 @@ def keyowrds_removal(df, list_to_remove):
         df['keyword_eng'] = df['keyword_eng'].str.replace(list_to_remove[key], '')
     return df
 
+def stemmList(my_list):
+    # the stemmer requires a language parameter
+    snow_stemmer = SnowballStemmer(language='english')
+    # porter_stemmer = PorterStemmer()
+
+    nltk.download('punkt')
+    stemmed_list = []
+    for l in my_list:
+        words = l.split(" ")
+        stem_words = []
+        # print(l)
+        for word in words:
+            x = snow_stemmer.stem(word)
+            stem_words.append(x)
+        key = " ".join(stem_words)
+        # print(key)
+        stemmed_list.append(key)
+    return stemmed_list
+
+def labelling_clusters(df, cluster_num, n):
+    df_cluster = df[df["cluster"] == cluster_num]
+    keywords_list = df_cluster.keyword_eng.to_list()
+    words = [word_tokenize(i) for i in keywords_list]
+    words_list = sum(words, [])
+
+    # Make the words singular
+    singular_words = [wnl.lemmatize(wrd) for wrd in words_list]
+    singular_words_lower = list(map(lambda x: x.lower(), singular_words))
+
+    # Remove stop words
+    stop_words = nltk.corpus.stopwords.words('english')
+    clean_words = [word for word in singular_words_lower if word not in stop_words]
+    clean_words_0 = [re.sub('[^a-zA-Z0-9]+', "", i) for i in clean_words]
+    clean_words_1 = [item for item in clean_words_0 if not item.isdigit()]
+    clean_words_2 = [x for x in clean_words_1 if x]
+
+    # Calculate the frequency of each word
+    fdist = nltk.FreqDist(clean_words_2)
+    # Rank the words by frequency
+    keywords = sorted(fdist, key=fdist.get, reverse=True)
+    keywords_1 = [' '.join(keywords[:n])]
+    return keywords_1
+
 # IMPORTANT FUNCTIONS:
 def data_preprocessing(df):
     # Make all column to lower case.
@@ -126,6 +169,166 @@ def data_preprocessing(df):
     print(" *** There were {} SHORT TAIL keywords, and {} LONG TAIL keywords".format(short_tail_df.shape[0],
                                                                                      long_tail_df.shape[0]))
     return long_tail_df, short_tail_df, df_org
+
+
+def topics_generator(df, df_clusters, clusters_labels):
+    """
+    This function is
+    :param df: keywords dataframe
+    :param df_clusters:
+    :param clusters_labels:
+    :return:
+    """
+
+    # model_name_topics = 'paraphrase-MiniLM-L6-v2'
+    model_name_topics = 'all-MiniLM-L6-v2'
+    embedder = SentenceTransformer(model_name_topics)
+    corpus_embeddings = embedder.encode(clusters_labels)
+
+    # Normalize the embeddings to unit length
+    corpus_embeddings = corpus_embeddings / np.linalg.norm(corpus_embeddings, axis=1, keepdims=True)
+
+    # Perform kmean clustering
+    clustering_model = AgglomerativeClustering(n_clusters=None,
+                                               distance_threshold=1.5)  # , affinity='cosine', linkage='average', distance_threshold=0.4)
+    clustering_model.fit(corpus_embeddings)
+    cluster_assignment = clustering_model.labels_
+
+    clustered_sentences = {}
+    for sentence_id, cluster_id in enumerate(cluster_assignment):
+        if cluster_id not in clustered_sentences:
+            clustered_sentences[cluster_id] = []
+
+        clustered_sentences[cluster_id].append(clusters_labels[sentence_id])
+
+    your_df_from_dict = pd.DataFrame.from_dict(clustered_sentences, orient='index')
+    dft = your_df_from_dict.transpose()
+
+    df_1 = pd.melt(dft, value_vars=dft.columns)
+    df_1.dropna(inplace=True)
+    df_1.rename(columns={'variable': 'TOPICS', 'value': 'SUB_TOPICS'}, inplace=True)
+
+    df_clusters.rename(columns={'labels': 'SUB_TOPICS'}, inplace=True)
+    df_clusters_pre = df_clusters.merge(df_1, on='SUB_TOPICS', how='left')
+    df_clusters_final = df_clusters_pre.merge(df[['id', 'keyword']], on='id', how='left')
+    df_clusters_final = df_clusters_final[['id', 'keyword_eng', 'semantic_score', 'SUB_TOPICS', 'TOPICS']]
+    topics = df_clusters_final.TOPICS.max()
+    print('*** GENERATING {} TOPICS USING AGGLOMERATIVE CLUSETERING '.format(topics))
+    return df_clusters_final
+
+def clusters_generator_cosine(df,  labels):
+    print('*** Keyword clustering using SENTENCE TRANSFORMERS...')
+    df.reset_index(drop=True, inplace=True)
+    sentences1 = labels
+    sentences2 = df.keyword_eng
+    id = df.id
+
+    # Compute embedding for both lists
+    embeddings1 = model.encode(sentences1, convert_to_tensor=True)
+    embeddings2 = model.encode(sentences2, convert_to_tensor=True)
+
+    # Compute cosine-similarities
+    cosine_scores = util.cos_sim(embeddings1, embeddings2)
+    score = []
+    SEN_1 = []
+    SEN_2 = []
+    ID = []
+
+    # Output the pairs with their score
+    for i in range(len(sentences2)):
+        for j in range(len(sentences1)):
+            score.append(cosine_scores[j][i].item())
+            SEN_1.append(sentences1[j])
+            SEN_2.append(sentences2[i])
+            ID.append(id[i])
+
+    # initialize data of lists.
+    data = {'id': ID,
+            'semantic_score': score,
+            'labels': SEN_1,
+            'keyword_eng': SEN_2
+            }
+
+    df = pd.DataFrame(data)
+    dt = df.loc[df.groupby(['keyword_eng', 'id'])['semantic_score'].idxmax()]
+    dt.sort_values('labels', inplace=True)
+    return (dt)
+
+
+def CLUSTERING_K_MEANS(processed_df, long_tail_df, short_tail_df, start_cluster, end_cluster, steps, cutoff):
+
+
+    global num_cl
+    textlist = long_tail_df.keyword_eng.to_list()
+    textlist_stem = stemmList(textlist)
+    text_data = pd.DataFrame(textlist_stem)
+    # Bag of words
+    vectorizer_cv = CountVectorizer(analyzer='word')
+    X_cv = vectorizer_cv.fit_transform(textlist_stem)
+    dic = {}
+    LABELS = {}
+
+    for cl_num in range(start_cluster, end_cluster, steps):
+
+        try:
+            kmeans = KMeans(n_clusters=cl_num, random_state=10)
+            kmeans.fit(X_cv)
+            result = pd.concat([text_data, pd.DataFrame(X_cv.toarray(), columns=vectorizer_cv.get_feature_names_out())],
+                               axis=1)
+            result['cluster'] = kmeans.predict(X_cv)
+            result.rename(columns={0: 'Keyword_ENG_stemmed'}, inplace=True)
+            df_results = result[['Keyword_ENG_stemmed', 'cluster']].copy()
+            df_results.insert(0, "id", long_tail_df.id.values, True)
+            df_results.insert(1, "keyword_eng", textlist, True)
+
+            for num_cl in range(cl_num + 1):
+                keyword_label = labelling_clusters(df_results, cluster_num=num_cl, n=2)
+                cl_lables = ''.join(keyword_label)
+                df_results.loc[df_results.cluster == num_cl, 'labels'] = cl_lables
+
+            # Similarity score calculation between LABELS AND KEYWORD ENGLISH.
+            # to have an idea how far a keyword from specific cluster.
+            sentences1 = df_results.labels
+            sentences2 = df_results.keyword_eng
+
+            # Compute embedding for both lists
+            embeddings1 = model.encode(sentences1, convert_to_tensor=True)
+            embeddings2 = model.encode(sentences2, convert_to_tensor=True)
+
+            # Compute cosine-similarities
+            cosine_scores = util.cos_sim(embeddings1, embeddings2)
+            y = []
+            # Output the pairs with their score
+            for i in range(len(sentences1)):
+                y.append(cosine_scores[i][i].item())
+
+            df_results['semantic_score'] = y
+
+            df_results.drop(['Keyword_ENG_stemmed', 'cluster'], inplace=True, axis=1)
+            labels = df_results.labels.unique()
+            if short_tail_df.shape[0] != 0 :
+                df_clusters = clusters_generator_cosine(short_tail_df, labels=labels)
+                clusters_short = df_clusters[df_results.columns.values.tolist()]
+                df_clusters_all = pd.concat([df_results, clusters_short], ignore_index=True)
+            else:
+            df_clusters_all = df_results
+            # Generating some statistics:
+            z = df_clusters_all.groupby(['labels'])['semantic_score'].mean()
+            A = z[z < cutoff]
+            final_clusters = topics_generator(df=long_tail_df, df_clusters=df_clusters_all, clusters_labels=labels)
+            # Adding columns van original data to the results
+            df_org = processed_df.drop(['keyword_eng'], axis=1)
+            final_clusters = final_clusters.merge(df_org, on='id', how='left')
+            dic[cl_num] = final_clusters
+            LABELS[cl_num] = A.index.values
+
+
+        except Exception as e:
+            print(e)
+            continue
+
+    return (dic,LABELS)
+
 
 def K_MEANS_TRANSFORMATION(processed_df,  start_cluster, end_cluster, steps):
 
@@ -287,6 +490,53 @@ if st.session_state["authentication_status"]:
         # long_tail_df, short_tail_df, processed_data = data_preprocessing(keywords_df)
         # data_download = convert_df(processed_data)
         # ste.download_button("Press to Download", data_download, "translated_data.csv")
+
+
+
+    load_K_means = st.button('GENERATE CLUSTERS: K-MEANS' )
+
+    if load_K_means:
+        long_tail_df, short_tail_df, processed_data = data_preprocessing(keywords_df)
+        with st.spinner('**The K-MEANS clustering algorithm is currently in operation. Please hold on ...**'):
+
+            model_name = 'all-MiniLM-L6-v2'
+            model = SentenceTransformer(model_name)
+
+            max_cluster = max(3,np.trunc(keywords_df.shape[0] * 0.1).astype(int))
+            min_cluster = max(1,np.trunc(max_cluster / 2).astype(int))
+            steps = max(1,np.trunc((max_cluster - min_cluster) / 3).astype(int))
+
+            cut_off = 0.5
+            data_list, labs = CLUSTERING_K_MEANS(processed_data, long_tail_df, short_tail_df, start_cluster=min_cluster,
+                                           end_cluster = max_cluster, steps=steps, cutoff=cut_off)
+
+
+            preffix = 'CLUSTER_id_'# ff
+            new_dict = {(preffix + str(key)): value for key, value in data_list.items()}
+            data_list = new_dict
+
+            new_labs = {(preffix + str(key)): value for key, value in labs.items()}
+            labs = new_labs
+            noisy_clusters = pd.DataFrame.from_dict(labs, orient='index')
+            noisy_clusters = noisy_clusters.transpose()
+            noisy_clusters = noisy_clusters.fillna(value='')
+            data_list['Noisy_clusters'] = noisy_clusters
+            df_xlsx = dfs_xlsx(data_list)
+
+            st.write("""
+            <p style="background-color: #FEC929; color: black; padding: 10px;"> 
+            Further examination is recommended for the subsequent clusters..
+            </p>
+            """, unsafe_allow_html=True)
+            # st.balloons()
+
+            st.dataframe(noisy_clusters)
+            st.subheader("Download data")
+            ste.download_button(label='Download Results',
+                               data=df_xlsx,
+                               file_name='K_MEANS_clustering.xlsx')
+
+
 
     model_name = ["<select>", "General Base", "General Roberta", "General miniML_L12", "General miniML_L6",
                   "Medics", "Education and training", "Finance"]

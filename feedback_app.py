@@ -281,22 +281,28 @@ if st.session_state["authentication_status"]:
         # keywords_df = pd.read_csv(uploaded_file_cl,encoding='latin-1')
         # max_value = np.trunc(keywords_df.shape[0] - 2).astype(int)
         # # long_tail_df, short_tail_df, processed_data = data_preprocessing(keywords_df)
-        # st.dataframe(keywords_df)
+
         keywords_df = pd.read_csv(uploaded_file_cl, encoding='latin-1')
+        st.dataframe(keywords_df)
         # long_tail_df, short_tail_df, processed_data = data_preprocessing(keywords_df)
         # data_download = convert_df(processed_data)
         # ste.download_button("Press to Download", data_download, "translated_data.csv")
 
+    model_name = ["<select>", "General Base", "General Roberta", "General miniML_L12", "General miniML_L6",
+                  "Medics", "Education and training", "Finance"]
 
-    load_K_means = st.button('GENERATE CLUSTERS: K-MEANS' )
+    select_box = st.selectbox('Select a model Transformer', options=model_name)
+    selected_option = option_to_model(select_box,option_models)
+
+    load_K_means = st.button('GENERATE CLUSTERS: TRANSFORMERS' )
 
     if load_K_means:
         long_tail_df, short_tail_df, processed_data = data_preprocessing(keywords_df)
 
-        with st.spinner('**The K-MEANS clustering algorithm is currently in operation. Please hold on ...**'):
+        with st.spinner('**The TRANSFORMERS clustering algorithm is currently in operation. Please hold on ...**'):
 
-            model_name = 'all-MiniLM-L6-v2'
-            model = SentenceTransformer(model_name)
+            # model_name = 'all-MiniLM-L6-v2'
+            model = SentenceTransformer(selected_option)
 
             max_cluster = max(3,np.trunc(keywords_df.shape[0] * 0.1).astype(int))
             min_cluster = max(1,np.trunc(max_cluster / 2).astype(int))
@@ -320,20 +326,17 @@ if st.session_state["authentication_status"]:
                                data=df_xlsx,
                                file_name='K_MEANS_clustering.xlsx')
 
-    ### AGLOMERATIVE  :
-    model_name = ["<select>", "General Base", "General Roberta", "General miniML_L12", "General miniML_L6",
-                  "Medics", "Education and training", "Finance"]
+    ### AGGLOMERATIVE :
 
-    select_box = st.selectbox('Select a model Transformer', options=model_name)
-    selected_option = option_to_model(select_box,option_models)
-    load_transformers = st.button('GENERATE CLUSTERS: TRANSFORMERS')
+
+    load_transformers = st.button('GENERATE CLUSTERS: AGGLOMERATIVE')
 
 
     if load_transformers and select_box != '<select>':
         st.write('You selected model:', selected_option)
         long_tail_df, short_tail_df, processed_data = data_preprocessing(keywords_df)
 
-        with st.spinner('**The Model Aglomerative clustering algorithm is currently running. Please hold on...**'):
+        with st.spinner('**The AGGLOMERATIVE Model clustering algorithm is currently running. Please hold on...**'):
 
 
             data_list = AgglomerativeClustering_algo(selected_option, processed_data)

@@ -294,7 +294,7 @@ if st.session_state["authentication_status"]:
     select_box = st.selectbox('Select a model Transformer', options=model_name)
     selected_option = option_to_model(select_box,option_models)
 
-    load_K_means = st.button('GENERATE CLUSTERS: TRANSFORMERS' )
+    load_K_means = st.button('GENERATE CLUSTERS: TRANSFORMERS & K-MEANS' )
 
     if load_K_means:
         long_tail_df, short_tail_df, processed_data = data_preprocessing(keywords_df)
@@ -308,7 +308,7 @@ if st.session_state["authentication_status"]:
             min_cluster = max(1,np.trunc(max_cluster / 2).astype(int))
             steps = max(1,np.trunc((max_cluster - min_cluster) / 3).astype(int))
 
-            data_list = K_MEANS_TRANSFORMATION(processed_data, start_cluster=5, end_cluster=15, steps=5)
+            data_list = K_MEANS_TRANSFORMATION(processed_data, start_cluster=min_cluster, end_cluster=max_cluster, steps=steps)
             preffix = 'CLUSTER_id_'
             new_dict = {(preffix + str(key)): value for key, value in data_list.items()}
             data_list = new_dict

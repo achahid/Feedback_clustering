@@ -311,7 +311,8 @@ def CLUSTERING_K_MEANS(processed_df, long_tail_df, short_tail_df, start_cluster,
                 clusters_short = df_clusters[df_results.columns.values.tolist()]
                 df_clusters_all = pd.concat([df_results, clusters_short], ignore_index=True)
             else:
-            df_clusters_all = df_results
+               df_clusters_all = df_results
+
             # Generating some statistics:
             z = df_clusters_all.groupby(['labels'])['semantic_score'].mean()
             A = z[z < cutoff]

@@ -135,14 +135,14 @@ def data_preprocessing(df):
             df.dropna(inplace=True)
             # Adding 'digit-' prefix for the rows that contains digits only as GoogleTranslator can not
             # translate digits only.
-            df["keyword"] = df["keyword"].apply(lambda x: 'digit-' + x if x.isdigit() else x)
+            # df["keyword"] = df["keyword"].apply(lambda x: 'digit-' + x if x.isdigit() else x)
             # print("The keywords are in the process of being translated to ENGLISH. Please hold on ... ")
-            my_list = df["keyword"].to_list()
+            # my_list = df["keyword"].to_list()
             # df["Keyword_eng"] = translate_to_english(my_list)
             df["keyword_eng"] = df["keyword"].apply(lambda x: GoogleTranslator(source='auto', target='en').translate(x))
             # remove the added prefix from the rows
-            df["keyword_eng"] = df["keyword_eng"].apply(lambda x: x.replace("digit-", "") if x.startswith("digit-") else x)
-            df["keyword"] = df["keyword"].apply(lambda x: x.replace("digit-", "") if x.startswith("digit-") else x)
+            # df["keyword_eng"] = df["keyword_eng"].apply(lambda x: x.replace("digit-", "") if x.startswith("digit-") else x)
+            # df["keyword"] = df["keyword"].apply(lambda x: x.replace("digit-", "") if x.startswith("digit-") else x)
         st.success('**The translation process is finished, we are now moving on to the clustering process.***')
 
     # Splits the data into short and long tail keywords:
@@ -610,8 +610,6 @@ if st.session_state["authentication_status"]:
                                data=df_xlsx,
                                file_name='K_MEANS_clustering.xlsx')
 
-
-
     model_name = ["<select>", "General Base", "General Roberta", "General miniML_L12", "General miniML_L6",
                   "Medics", "Education and training", "Finance"]
 
@@ -652,7 +650,6 @@ if st.session_state["authentication_status"]:
     ### AGGLOMERATIVE :
 
     load_transformers = st.button('GENERATE CLUSTERS: AGGLOMERATIVE')
-
 
     if load_transformers and select_box != '<select>':
         st.write('You selected model:', selected_option)

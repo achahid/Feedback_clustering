@@ -256,7 +256,7 @@ def clusters_generator_cosine(df,  labels):
 
 
 def CLUSTERING_K_MEANS(processed_df, long_tail_df, short_tail_df, start_cluster, end_cluster, steps, cutoff):
-
+   'this function uses CountVectorizer (words frequency) then kmeans'
 
     global num_cl
     textlist = long_tail_df.keyword_eng.to_list()
@@ -273,8 +273,7 @@ def CLUSTERING_K_MEANS(processed_df, long_tail_df, short_tail_df, start_cluster,
         try:
             kmeans = KMeans(n_clusters=cl_num, random_state=10)
             kmeans.fit(X_cv)
-            result = pd.concat([text_data, pd.DataFrame(X_cv.toarray(), columns=vectorizer_cv.get_feature_names_out())],
-                               axis=1)
+            result = pd.concat([text_data, pd.DataFrame(X_cv.toarray(), columns=vectorizer_cv.get_feature_names_out())], axis=1)
             result['cluster'] = kmeans.predict(X_cv)
             result.rename(columns={0: 'Keyword_ENG_stemmed'}, inplace=True)
             df_results = result[['Keyword_ENG_stemmed', 'cluster']].copy()
@@ -323,7 +322,6 @@ def CLUSTERING_K_MEANS(processed_df, long_tail_df, short_tail_df, start_cluster,
             dic[cl_num] = final_clusters
             LABELS[cl_num] = A.index.values
 
-
         except Exception as e:
             print(e)
             continue
@@ -332,6 +330,7 @@ def CLUSTERING_K_MEANS(processed_df, long_tail_df, short_tail_df, start_cluster,
 
 
 def K_MEANS_TRANSFORMATION(processed_df,  start_cluster, end_cluster, steps):
+    'function that uses the transfomers then k-means'
 
     # Define the list of feedback sentences
     feedback_list = processed_df.keyword_eng.to_list()
@@ -388,8 +387,10 @@ def dfs_xlsx(data_list):
 
 
 def AgglomerativeClustering_algo(model_name_topics,keywords_df):
+    """this function we will cluster the feedback/sentences/keywords without pre-specifying the number of clusters...
+       hence different approach then previous algo..."""
 
-    dic={}
+    dic = {}
     feedback_list = keywords_df.keyword_eng.to_list()
     embedder = SentenceTransformer(model_name_topics)
     corpus_embeddings = embedder.encode(feedback_list)
@@ -428,8 +429,10 @@ def option_to_model(level_number,options):
 
 
 def TOPICS_CLUSTERING(df,model_name_topics):
-    'function to generate topics for each sentence and cluster the topics'
+    'function to generate topics for each sentence/feedback and cluster the topics, hence clustering the feedback'
+
     # df = keywords_df.copy()
+    dic = {}
     sentences = df.keyword_eng.to_list()
     topics = []
     for sentence in sentences:
@@ -490,7 +493,8 @@ def TOPICS_CLUSTERING(df,model_name_topics):
 
     df_clusters_final = df.merge(df_results , on='id', how='left')
     df_clusters_final = df_clusters_final[['id', 'keyword', 'keyword_eng', 'cluster', 'labels']]
-    return df_clusters_final
+    dic['topics_clusters'] = df_clusters_final
+    return dic
 
 
 
@@ -621,7 +625,6 @@ if st.session_state["authentication_status"]:
 
         with st.spinner('**The TRANSFORMERS clustering algorithm is currently in operation. Please hold on ...**'):
 
-            # model_name = 'all-MiniLM-L6-v2'
             model = SentenceTransformer(selected_option)
 
             max_cluster = max(3,np.trunc(keywords_df.shape[0] * 0.1).astype(int))

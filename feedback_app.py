@@ -425,6 +425,75 @@ def option_to_model(level_number,options):
   except Exception as e:
     return e
 
+
+
+def TOPICS_CLUSTERING(df,model_name_topics):
+    'function to generate topics for each sentence and cluster the topics'
+    # df = keywords_df.copy()
+    sentences = df.keyword_eng.to_list()
+    topics = []
+    for sentence in sentences:
+        tokens = nltk.word_tokenize(sentence)
+        pos_tags = nltk.pos_tag(tokens)
+
+        for i, (word, tag) in enumerate(pos_tags):
+            if tag.startswith('NN'):
+                # print(f"The topic of the sentence '{sentence}' is '{word}'.")
+                topics.append(word)
+                break
+    topics_list = [element.lower() for element in topics]
+
+    # initialize data of lists.
+    data = {'Feedback': sentences,
+            'keyword': topics_list,
+            'keyword_eng': topics_list}
+    clustered_df = pd.DataFrame(data)
+
+    clusters_labels = clustered_df.keyword_eng
+    ID =  df.id
+    embedder = SentenceTransformer(model_name_topics)
+    corpus_embeddings = embedder.encode(clusters_labels)
+
+    # Normalize the embeddings to unit length
+    corpus_embeddings = corpus_embeddings / np.linalg.norm(corpus_embeddings, axis=1, keepdims=True)
+
+    # Perform kmean clustering
+    clustering_model = AgglomerativeClustering(n_clusters=None,
+                                               distance_threshold=1.5)  # , affinity='cosine', linkage='average', distance_threshold=0.4)
+    clustering_model.fit(corpus_embeddings)
+    cluster_assignment = clustering_model.labels_
+
+    clustered_sentences = {}
+    clustered_sentences_id = {}
+
+    for sentence_id, cluster_id in enumerate(cluster_assignment):
+        if cluster_id not in clustered_sentences:
+            clustered_sentences[cluster_id] = []
+
+        if cluster_id not in clustered_sentences_id:
+            clustered_sentences_id[cluster_id] = []
+
+        clustered_sentences[cluster_id].append(clusters_labels[sentence_id])
+        clustered_sentences_id[cluster_id].append(ID[sentence_id])
+
+    your_df_from_dict = pd.DataFrame.from_dict(clustered_sentences, orient='index')
+    dft = your_df_from_dict.transpose()
+    df_results = pd.melt(dft, value_vars=dft.columns)
+    df_results.dropna(inplace=True)
+    df_results.rename(columns={'variable': 'cluster', 'value': 'labels'}, inplace=True)
+
+    your_id = pd.DataFrame.from_dict(clustered_sentences_id, orient='index')
+    dft_id = your_id.transpose()
+    df_id = pd.melt(dft_id, value_vars=dft.columns)
+    df_id.dropna(inplace=True)
+    df_results['id'] = df_id['value'].astype(int)
+
+    df_clusters_final = df.merge(df_results , on='id', how='left')
+    df_clusters_final = df_clusters_final[['id', 'keyword', 'keyword_eng', 'cluster', 'labels']]
+    return df_clusters_final
+
+
+
 # These are some model options for sentence transformers:f
 option_models = {
     "<select>": '<select>',
@@ -542,7 +611,7 @@ if st.session_state["authentication_status"]:
     model_name = ["<select>", "General Base", "General Roberta", "General miniML_L12", "General miniML_L6",
                   "Medics", "Education and training", "Finance"]
 
-    select_box = st.selectbox('Select a model Transformer', options=model_name)
+    select_box = st.selectbox('SELECT A MODEL AND RUN ONE OF THE NEXT ALGORITHMS', options=model_name)
     selected_option = option_to_model(select_box,option_models)
 
     load_K_means = st.button('GENERATE CLUSTERS: TRANSFORMERS & K-MEANS' )
@@ -579,7 +648,6 @@ if st.session_state["authentication_status"]:
 
     ### AGGLOMERATIVE :
 
-
     load_transformers = st.button('GENERATE CLUSTERS: AGGLOMERATIVE')
 
 
@@ -608,6 +676,31 @@ if st.session_state["authentication_status"]:
                                data=df_xlsx,
                                file_name='Aglomerative_clustering.xlsx')
 
+    ### TOPICS
+    load_topics = st.button('GENERATE CLUSTERS: TOPICS CLUSTERS')
+
+    if load_topics and select_box != '<select>':
+        st.write('You selected model:', selected_option)
+        long_tail_df, short_tail_df, processed_data = data_preprocessing(keywords_df)
+
+        with st.spinner('**The TOPIC Modelling clustering algorithm is currently running. Please hold on...**'):
+
+            df_clusters_final =  TOPICS_CLUSTERING(keywords_df,model_name_topics=selected_option)
+            data_list = {}
+            data_list['results'] = df_clusters_final
+
+            df_xlsx = dfs_xlsx(data_list)
+
+            st.write("""
+                            <p style="background-color: #FEC929; color: black; padding: 10px;">
+                            Further examination is recommended for the subsequent clusters..
+                            </p>
+                            """, unsafe_allow_html=True)
+
+            st.subheader("Download data")
+            ste.download_button(label='Download Results',
+                                data=df_xlsx,
+                                file_name='TOPICS_clustering.xlsx')
 
 
 

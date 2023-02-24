@@ -256,7 +256,7 @@ def clusters_generator_cosine(df,  labels):
 
 
 def CLUSTERING_K_MEANS(processed_df, long_tail_df, short_tail_df, start_cluster, end_cluster, steps, cutoff):
-   'this function uses CountVectorizer (words frequency) then kmeans'
+    'this function uses CountVectorizer (words frequency) then kmeans'
 
     global num_cl
     textlist = long_tail_df.keyword_eng.to_list()

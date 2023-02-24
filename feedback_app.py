@@ -688,10 +688,7 @@ if st.session_state["authentication_status"]:
 
         with st.spinner('**The TOPIC Modelling clustering algorithm is currently running. Please hold on...**'):
 
-            df_clusters_final =  TOPICS_CLUSTERING(keywords_df,model_name_topics=selected_option)
-            data_list = {}
-            data_list['results'] = df_clusters_final
-
+            data_list =  TOPICS_CLUSTERING(keywords_df,model_name_topics=selected_option)
             df_xlsx = dfs_xlsx(data_list)
 
             st.write("""

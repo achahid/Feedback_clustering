@@ -39,6 +39,9 @@ from io import BytesIO
 
 import streamlit as st
 
+import os
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+
 
 
 pd.options.mode.chained_assignment = None

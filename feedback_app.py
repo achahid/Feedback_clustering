@@ -533,7 +533,6 @@ authenticator = stauth.Authenticate(names, usernames, hashed_passwords, 'some_co
 name, authentication_status, username = authenticator.login('Login', 'sidebar')
 
 
-
 if st.session_state["authentication_status"]:
 
     authenticator.logout("Logout","sidebar")
@@ -542,7 +541,6 @@ if st.session_state["authentication_status"]:
 
     st.warning("Please ensure that your data includes the column **KEYWORD** :eye-in-speech-bubble: ")
     uploaded_file_cl = st.file_uploader("Upload data", type=['csv'])
-
 
     if uploaded_file_cl is not None:
 
@@ -555,7 +553,6 @@ if st.session_state["authentication_status"]:
         # long_tail_df, short_tail_df, processed_data = data_preprocessing(keywords_df)
         # data_download = convert_df(processed_data)
         # ste.download_button("Press to Download", data_download, "translated_data.csv")
-
 
     model_name = ["<select>", "General Base", "General Roberta", "General miniML_L12", "General miniML_L6",
                   "Medics", "Education and training", "Finance"]

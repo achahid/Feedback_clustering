@@ -8,6 +8,7 @@
 
 import streamlit_authenticator as stauth
 import nltk
+import csv
 import streamlit_ext as ste
 import nltk_download_utils
 from googletrans import Translator
@@ -550,13 +551,20 @@ if st.session_state["authentication_status"]:
     encoding_name = [ "UTF-8" , "LATIN" ]
 
     select_box = st.selectbox('SELECT AN APPROPRIATE ENCODING', options=encoding_name)
-    selected_option = option_to_model(select_box,option_encoding)
+    selected_encoding = option_to_model(select_box,option_encoding)
 
     uploaded_file_cl = st.file_uploader("Upload data I", type=['csv'])
 
     if uploaded_file_cl is not None:
 
-        keywords_df = pd.read_csv(uploaded_file_cl, encoding=selected_option)
+        with open(uploaded_file_cl, newline='', encoding=selected_encoding) as file:
+            dialect = csv.Sniffer().sniff(file.read(1024))
+            file.seek(0)
+            reader = csv.reader(file, dialect)
+            data = [row for row in reader]
+        keywords_df = pd.DataFrame(data[1:], columns=data[0])
+
+        # keywords_df = pd.read_csv(uploaded_file_cl, encoding=selected_option)
         st.dataframe(keywords_df)
 
 

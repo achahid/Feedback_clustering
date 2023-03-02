@@ -504,6 +504,10 @@ option_models = {
     'Finance':'roberta-base-nli-mean-tokens',
 }
 
+option_encoding= {
+    "UTF-8": 'utf-8',
+    "LATIN": 'latin-1'
+}
 
 html_temp = """
 <div style="background-color:blue;padding:1.5px">
@@ -543,19 +547,18 @@ if st.session_state["authentication_status"]:
     st.sidebar.text('version Feb 2023')
 
     st.warning("Please ensure that your data includes the column **KEYWORD** :eye-in-speech-bubble: ")
-    uploaded_file_cl = st.file_uploader("Upload data", type=['csv'])
+    encoding_name = [ "UTF-8" , "LATIN" ]
+
+    select_box = st.selectbox('SELECT AN APPROPRIATE ENCODING', options=encoding_name)
+    selected_option = option_to_model(select_box,option_encoding)
+
+    uploaded_file_cl = st.file_uploader("Upload data I", type=['csv'])
 
     if uploaded_file_cl is not None:
 
-        # keywords_df = pd.read_csv(uploaded_file_cl,encoding='latin-1')
-        # max_value = np.trunc(keywords_df.shape[0] - 2).astype(int)
-        # # long_tail_df, short_tail_df, processed_data = data_preprocessing(keywords_df)
-
-        keywords_df = pd.read_csv(uploaded_file_cl, encoding='latin-1')
+        keywords_df = pd.read_csv(uploaded_file_cl, encoding=selected_option)
         st.dataframe(keywords_df)
-        # long_tail_df, short_tail_df, processed_data = data_preprocessing(keywords_df)
-        # data_download = convert_df(processed_data)
-        # ste.download_button("Press to Download", data_download, "translated_data.csv")
+
 
     model_name = ["<select>", "General Base", "General Roberta", "General miniML_L12", "General miniML_L6",
                   "Medics", "Education and training", "Finance"]

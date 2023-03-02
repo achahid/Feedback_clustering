@@ -9,6 +9,7 @@
 import streamlit_authenticator as stauth
 import nltk
 import csv
+import io
 import streamlit_ext as ste
 import nltk_download_utils
 from googletrans import Translator
@@ -548,7 +549,7 @@ if st.session_state["authentication_status"]:
     st.sidebar.text('version Feb 2023')
 
     st.warning("Please ensure that your data includes the column **KEYWORD** :eye-in-speech-bubble: ")
-    encoding_name = [ "UTF-8" , "LATIN" ]
+    encoding_name = ["UTF-8" , "LATIN" ]
 
     select_box = st.selectbox('SELECT AN APPROPRIATE ENCODING', options=encoding_name)
     selected_encoding = option_to_model(select_box,option_encoding)
@@ -556,16 +557,30 @@ if st.session_state["authentication_status"]:
     uploaded_file_cl = st.file_uploader("Upload data I", type=['csv'])
 
     if uploaded_file_cl is not None:
-
-        with open(uploaded_file_cl, newline='', encoding=selected_encoding) as file:
+        file_contents = uploaded_file_cl.getvalue()
+        file = io.StringIO(file_contents.decode(selected_encoding))
+        try:
             dialect = csv.Sniffer().sniff(file.read(1024))
             file.seek(0)
             reader = csv.reader(file, dialect)
-            data = [row for row in reader]
+        except:
+            file.seek(0)
+            reader = csv.reader(file, delimiter=',')
+        data = [row for row in reader]
         keywords_df = pd.DataFrame(data[1:], columns=data[0])
+        st.dataframe(keywords_df)
+
+    # if uploaded_file_cl is not None:
+    #     # file_buffer = io.StringIO(uploaded_file_cl.getvalue().decode("utf-8"))
+    #     with open(uploaded_file_cl, newline='', encoding=selected_encoding) as file:
+    #         dialect = csv.Sniffer().sniff(file.read(1024))
+    #         file.seek(0)
+    #         reader = csv.reader(file, dialect)
+    #         data = [row for row in reader]
+    #     keywords_df = pd.DataFrame(data[1:], columns=data[0])
 
         # keywords_df = pd.read_csv(uploaded_file_cl, encoding=selected_option)
-        st.dataframe(keywords_df)
+        # st.dataframe(keywords_df)
 
 
     model_name = ["<select>", "General Base", "General Roberta", "General miniML_L12", "General miniML_L6",

@@ -136,7 +136,7 @@ def data_preprocessing(df):
 
     if 'keyword_eng' not in df.columns:
         with st.spinner('**The keywords are in the process of being translated to ENGLISH. Please hold on ...** '):
-            df = df[['id', 'keyword']].copy()
+            # df = df[['id', 'keyword']].copy()
             df.dropna(inplace=True)
             # Adding 'digit-' prefix for the rows that contains digits only as GoogleTranslator can not
             # translate digits only.
@@ -444,12 +444,12 @@ def dfs_xlsx(data_list):
     results_data = output.getvalue()
     return results_data
 
-def AgglomerativeClustering_algo(model_name_topics,keywords_df):
+def AgglomerativeClustering_algo(model_name_topics,df):
     """this function we will cluster the feedback/sentences/keywords without pre-specifying the number of clusters...
        hence different approach then previous algo..."""
 
     dic = {}
-    feedback_list = keywords_df.keyword_eng.to_list()
+    feedback_list = df.keyword_eng.to_list()
     embedder = SentenceTransformer(model_name_topics)
     corpus_embeddings = embedder.encode(feedback_list)
 
@@ -457,8 +457,7 @@ def AgglomerativeClustering_algo(model_name_topics,keywords_df):
     corpus_embeddings = corpus_embeddings / np.linalg.norm(corpus_embeddings, axis=1, keepdims=True)
 
     # Perform k-means clustering
-    clustering_model = AgglomerativeClustering(n_clusters=None,
-                                               distance_threshold=1.5)  # , affinity='cosine', linkage='average', distance_threshold=0.4)
+    clustering_model = AgglomerativeClustering(n_clusters=None, distance_threshold=1.5)  # , affinity='cosine', linkage='average', distance_threshold=0.4)
     clustering_model.fit(corpus_embeddings)
     cluster_assignment = clustering_model.labels_
 

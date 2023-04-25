@@ -102,6 +102,7 @@ def stemmList(my_list):
 def data_preprocessing(df):
     # Make all column to lower case.
     df.columns = map(str.lower, df.columns)
+
     if 'keyword' not in df.columns:
         print('ERROR: PLEASE CHECK IF YOUR DATA CONTAINS keyword COLUMN')
         # st.error('Please ensure that your data includes the column **KEYWORD**', icon="🚨")
@@ -130,6 +131,7 @@ def data_preprocessing(df):
         st.success('**The translation process is finished, we are now moving on to the clustering process.***')
 
     # Splits the data into short and long tail keywords:
+    df = df.dropna(subset=['keyword_eng'])
     df_org = df.copy()
     df['keyword_eng'] = df['keyword_eng'].astype(str)
     df['keyword'] = df['keyword'].astype(str)
